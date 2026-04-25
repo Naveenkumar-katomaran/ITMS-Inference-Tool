@@ -19,7 +19,7 @@ A high-performance, professional-grade video inference tool designed for Traffic
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone https://github.com/Naveenkumar-katomaran/ITMS-Inference-Tool.git
 cd ITMS/video_inference_tool
 
 # Install dependencies
