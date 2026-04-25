@@ -20,7 +20,7 @@ A high-performance, professional-grade video inference tool designed for Traffic
 ```bash
 # Clone the repository
 git clone https://github.com/Naveenkumar-katomaran/ITMS-Inference-Tool.git
-cd ITMS/video_inference_tool
+cd ITMS-Inference-Tool
 
 # Install dependencies
 pip install PyQt6 ultralytics opencv-python torch
