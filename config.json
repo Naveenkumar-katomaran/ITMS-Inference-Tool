@@ -1,0 +1,43 @@
+{
+    "models": {
+        "vehicle_detection": "models/vehicle_detection/yolov8n.pt",
+        "plate_detection": "models/plate_detection/car_model.pt",
+        "ocr": "models/ocr/ocr_model.pt"
+    },
+    "inference": {
+        "vehicle_threshold": 0.5,
+        "plate_threshold": 0.2,
+        "ocr_threshold": 0.35,
+        "device": "cuda"
+    },
+    "ui": {
+        "default_speed": 1.0,
+        "zoom_step": 0.2,
+        "cache_limit": 100
+    },
+    "keybindings": {
+        "play_pause": "Space",
+        "next_frame": [
+            "E",
+            "Right"
+        ],
+        "prev_frame": [
+            "W",
+            "Left"
+        ],
+        "infer_frame": "I",
+        "quit": "Q",
+        "full_screen": [
+            "F11",
+            "F"
+        ],
+        "upload_file": "O",
+        "clear_overlay": "C",
+        "speed_1x": "1",
+        "speed_2x": "2",
+        "speed_4x": "4",
+        "zoom_in": "+",
+        "zoom_out": "-",
+        "reset_zoom": "R"
+    }
+}
