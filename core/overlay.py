@@ -10,52 +10,60 @@ class OverlayManager:
         overlay = frame.copy()
         
         # Cyber HUD Colors (RGB)
-        colors = {
-            "vehicle": (255, 249, 0),  # Cyan-ish (translated from BGR/RGB thoughts, let's use actual Cyan: 0, 249, 255)
-            "plate": (0, 0, 255),    # Red
-        }
-        
-        # Correcting order for RGB (OpenCV expects RGB here because I convert it in video_handler)
-        # But wait, video_handler returns RGB. cv2 drawing functions expect (B, G, R).
-        # Let's check main_window: set_frame uses Format_RGB888. 
-        # So I should define colors as (R, G, B) if I'm drawing on an RGB frame.
-        
         CYAN = (0, 249, 255)
-        RED = (255, 64, 129)
         GREEN = (0, 255, 127)
         
-        type_colors = {
-            "vehicle": GREEN,
-            "plate": CYAN,
-        }
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        text_thickness = 1
+        font_scale_name = 0.6
+        font_scale_pixel = 0.4
         
-        for category, items in detections.items():
-            color = type_colors.get(category[:-1] if category.endswith('s') else category, CYAN)
-            for item in items:
-                x1, y1, x2, y2 = map(int, item["bbox"])
-                conf = item["conf"]
-                label = item["label"]
+        for v in detections:
+            v_color = GREEN
+            vx1, vy1, vx2, vy2 = map(int, v["bbox"])
+            vw, vh = vx2 - vx1, vy2 - vy1
+            
+            # Draw Vehicle
+            cv2.rectangle(overlay, (vx1, vy1), (vx2, vy2), (0, 0, 0), 4)
+            cv2.rectangle(overlay, (vx1, vy1), (vx2, vy2), v_color, 2)
+            
+            v_name = f"{v['label'].upper()} {v['conf']:.2f}"
+            v_pixel = f"W:{vw} H:{vh}"
+            
+            # Label background calc
+            (tw1, th1), _ = cv2.getTextSize(v_name, font, font_scale_name, text_thickness)
+            (tw2, th2), _ = cv2.getTextSize(v_pixel, font, font_scale_pixel, text_thickness)
+            max_tw = max(tw1, tw2)
+            total_th = th1 + th2 + 10
+            
+            cv2.rectangle(overlay, (vx1 - 2, vy1 - total_th - 5), (vx1 + max_tw + 12, vy1 + 2), (0, 0, 0), -1)
+            cv2.rectangle(overlay, (vx1, vy1 - total_th - 3), (vx1 + max_tw + 10, vy1), v_color, -1)
+            cv2.putText(overlay, v_name, (vx1 + 5, vy1 - th2 - 12), font, font_scale_name, (255, 255, 255), text_thickness, cv2.LINE_AA)
+            cv2.putText(overlay, v_pixel, (vx1 + 5, vy1 - 5), font, font_scale_pixel, (255, 255, 255), text_thickness, cv2.LINE_AA)
+
+            # Draw Plates for this vehicle
+            for p in v.get("plates", []):
+                p_color = CYAN
+                px1, py1, px2, py2 = map(int, p["bbox"])
+                pw, ph = px2 - px1, py2 - py1
                 
-                # High-Contrast Bounding Box (Black outline + Color inner)
-                cv2.rectangle(overlay, (x1, y1), (x2, y2), (0, 0, 0), 4)
-                cv2.rectangle(overlay, (x1, y1), (x2, y2), color, 2)
+                cv2.rectangle(overlay, (px1, py1), (px2, py2), (0, 0, 0), 4)
+                cv2.rectangle(overlay, (px1, py1), (px2, py2), p_color, 2)
                 
-                # Prepare text
-                display_text = f"{label.upper()} {conf:.2f}"
-                if category == "plates" and item.get("text"):
-                    display_text = f"{item['text']} | {display_text}"
+                p_name = f"{p['label'].upper()} {p['conf']:.2f}"
+                if p.get("text"): p_name = f"{p['text']} | {p_name}"
+                p_pixel = f"W:{pw} H:{ph}"
                 
-                # Label positioning and sizing
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                font_scale = 0.7 # Slightly larger as requested
-                text_thickness = 2
-                (tw, th), baseline = cv2.getTextSize(display_text, font, font_scale, text_thickness)
-                
-                # Draw label background with black border
-                cv2.rectangle(overlay, (x1 - 2, y1 - th - 12), (x1 + tw + 12, y1 + 2), (0, 0, 0), -1)
-                cv2.rectangle(overlay, (x1, y1 - th - 10), (x1 + tw + 10, y1), color, -1)
-                
-                # Draw text with high contrast
-                cv2.putText(overlay, display_text, (x1 + 5, y1 - 7), font, font_scale, (255, 255, 255), text_thickness, cv2.LINE_AA)
+                (tw1, th1), _ = cv2.getTextSize(p_name, font, font_scale_name, text_thickness)
+                (tw2, th2), _ = cv2.getTextSize(p_pixel, font, font_scale_pixel, text_thickness)
+                max_tw = max(tw1, tw2)
+                total_th = th1 + th2 + 10
+
+                cv2.rectangle(overlay, (px1 - 2, py1 - total_th - 5), (px1 + max_tw + 12, py1 + 2), (0, 0, 0), -1)
+                cv2.rectangle(overlay, (px1, py1 - total_th - 3), (px1 + max_tw + 10, py1), p_color, -1)
+                cv2.putText(overlay, p_name, (px1 + 5, py1 - th2 - 12), font, font_scale_name, (255, 255, 255), text_thickness, cv2.LINE_AA)
+                cv2.putText(overlay, p_pixel, (px1 + 5, py1 - 5), font, font_scale_pixel, (255, 255, 255), text_thickness, cv2.LINE_AA)
+
+        return overlay
         
         return overlay

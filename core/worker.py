@@ -34,16 +34,17 @@ class PlaybackThread(QThread):
         self.wait()
 
 class InferenceWorker(QThread):
-    finished = pyqtSignal(object)  # detections
+    finished = pyqtSignal(object, float)  # detections, msec
 
-    def __init__(self, engine, frame):
+    def __init__(self, engine, frame, msec):
         super().__init__()
         self.engine = engine
         self.frame = frame
+        self.msec = msec
 
     def run(self):
         detections = self.engine.run_inference(self.frame)
-        self.finished.emit(detections)
+        self.finished.emit(detections, self.msec)
 
 class SeekWorker(QThread):
     """Handles asynchronous seeking to prevent UI lag."""

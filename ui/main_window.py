@@ -13,6 +13,9 @@ from core.worker import PlaybackThread, InferenceWorker, SeekWorker
 from utils.config_loader import get_config
 from ui.theme import Theme
 from ui.settings_dialog import SettingsDialog
+from utils.logger import logger as itms_logger
+from utils.result_saver import saver as itms_saver
+import cv2
 
 class ClickableSlider(QSlider):
     def mousePressEvent(self, event):
@@ -130,9 +133,9 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select Source", "", 
                                                   "Media (*.mp4 *.avi *.mkv *.jpg *.png)")
         if file_path:
+            self.current_video_path = file_path
             self.stop_playback()
             if file_path.lower().endswith(('.jpg', '.png', '.jpeg')):
-                import cv2
                 img = cv2.imread(file_path)
                 self.current_frame = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 self.video_widget.set_frame(self.current_frame)
@@ -204,14 +207,52 @@ class MainWindow(QMainWindow):
         if self.current_frame is None: return
         self.stop_playback()
         self.statusBar.showMessage("WORKER: COMPUTING DETECTIONS...")
-        self.inference_worker = InferenceWorker(self.inference_engine, self.current_frame)
+        
+        # Capture current video millisecond
+        msec = 0
+        if hasattr(self, 'current_video_path') and not self.current_video_path.lower().endswith(('.jpg', '.png', '.jpeg')):
+            msec = self.video_handler.cap.get(cv2.CAP_PROP_POS_MSEC)
+            
+        self.inference_worker = InferenceWorker(self.inference_engine, self.current_frame, msec)
         self.inference_worker.finished.connect(self.on_inference_finished)
         self.inference_worker.start()
 
-    def on_inference_finished(self, detections):
+    def on_inference_finished(self, detections, msec):
         overlay_frame = self.overlay_manager.draw_detections(self.current_frame, detections)
         self.video_widget.set_frame(overlay_frame)
-        self.statusBar.showMessage("INFERENCE COMPLETE")
+        self.statusBar.showMessage("INFERENCE COMPLETE & LOGGED")
+        
+        # Logging and Saving
+        vtime_formatted = self._format_vtime_mills(msec)
+        vname = getattr(self, 'current_video_path', 'source')
+        
+        # Hierarchical Logging
+        for v in detections:
+            # 1. Log Vehicle
+            itms_logger.log_detection(vname, vtime_formatted, "VEHICLE", v['label'], v['conf'], v['bbox'])
+            
+            # 2. Log Plates and Chars for this vehicle
+            for p in v.get('plates', []):
+                itms_logger.log_ocr_summary(vname, vtime_formatted, p['text'], p['text_conf'])
+                itms_logger.log_detection(vname, vtime_formatted, "PLATE", p['label'], p['conf'], p['bbox'])
+                for c in p.get('chars', []):
+                    itms_logger.log_detection(vname, vtime_formatted, "CHAR", c['label'], c['conf'], c['bbox'])
+            
+            # 3. Add 5-line gap after each vehicle's data
+            for _ in range(5):
+                print("")
+                if itms_logger.current_logger:
+                    itms_logger.current_logger.info("")
+        
+        # Save results
+        itms_saver.save_results(vname, self.current_frame, overlay_frame, msec, detections)
+
+    def _format_vtime_mills(self, msec):
+        seconds = int(msec // 1000)
+        milliseconds = int(msec % 1000)
+        minutes, seconds = divmod(seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
 
     def clear_overlay(self):
         if self.current_frame is not None:
