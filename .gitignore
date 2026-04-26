@@ -5,3 +5,5 @@ utils/__pycache__
 build
 dist
 ITMS_Inference_Tool.spec
+logs
+results

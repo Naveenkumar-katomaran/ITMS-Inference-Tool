@@ -5,7 +5,7 @@
         "ocr": "models/ocr/ocr_model.pt"
     },
     "inference": {
-        "vehicle_threshold": 0.5,
+        "vehicle_threshold": 0.2,
         "plate_threshold": 0.2,
         "ocr_threshold": 0.35,
         "device": "cuda"
